@@ -38,13 +38,17 @@ body { background:#fff; min-height:100vh; }
 
 .section-logo { height:20px; margin:0.5rem 0 0.3rem; display:block; }
 
-/* Account list and items */
+/* Account list and items (investment uses same styles to match others exactly) */
 .account-list { background:#fff; border-radius:0 0 8px 8px; overflow:hidden; }
 .account-item { padding:0.8rem; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
 .name { font-weight:500; color:#003366; font-size:0.9rem; }
 .balance { color:#003366; font-weight:700; font-size:1.1rem; margin-left:auto; margin-right:0.5rem; text-align:right; flex-shrink:0; }
 .view-btn { background:#e6e6e6; color:#003366; border:none; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.6rem; font-weight:500; cursor:pointer; }
 .open-new { display:block; text-align:center; color:#0066cc; font-weight:500; padding:0.8rem; font-size:0.8rem; }
+
+/* Keep investment-account using same font/colour as other accounts (user requested exact match) */
+.account-item.investment-account .name { font-weight:500; color:#003366; font-size:0.9rem; }
+.account-item.investment-account .balance { color:#003366; font-weight:700; font-size:1.1rem; }
 
 /* Bottom nav */
 .bottom-nav { position:fixed; bottom:0; left:0; width:100%; background:#fff; display:flex; justify-content:space-around; box-shadow:0 -2px 5px rgba(0,0,0,.1); padding:0.5rem 0; z-index:10; max-width:375px; margin:0 auto; }
@@ -93,7 +97,7 @@ body { background:#fff; min-height:100vh; }
 .icon.eye { position:absolute; right:0.6rem; top:50%; transform:translateY(-50%); cursor:pointer; }
 .icon.eye.off { background-image:url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDI0IDI0JyBmaWxsPScjNjY2Jz48cGF0aCBkPSdNMTIgN2MyLjc2IDAgNSAyLjI0IDUgNSAwIC42NS0uMTMgMS4yNi0uMzYgMS44M2wyLjkyIDIuOTJjMS41MS0xLjIyIDIuNzItMi44MiAzLjQ0LTQuNzVDMjEuMjcgNy42MSAxNy4wMSA0LjUgMTIgNC41Yy0xLjcxIDAtMy4zNC4zNy00LjgzIDEuMDNsMi4xMyAyLjEzQzEwLjc0IDcuMTMgMTEuMzUgNyAxMiA3em04Ljk2IDIuOTZsLTIuMjctMi4yN2MuOTktMS4xNCAxLjc5LTIuNTEgMi4zMS00LjA0QzIxLjczIDcuMzkgMTcuNDcgMTAuNSAxMiAxMC41Yy0uOTUgMC0xLjg2LS4xMS0yLjczLS4zTDcuMSAxMi4zN0M3LjA0IDEyLjU4IDcgMTIuNzkgNyAxM2MwIDIuNzYgMi4yNCA1IDUgNSAxLjIxIDAgMi4zMy0uNDQgMy4xOS0xLjE3bDEuMjcgMS4yN2MtMS4wNSAuNTEtMi4yMiAuOC0zLjQ2IC44LTUuMDEgMC05LjI3LTMuMTEtMTEtNy41IDEuNzMtNC4zOSA2LTcuNSAxMS03LjUgMi4wMiAwIDMuOTQuNTEgNS42NCAxLjM5eicvPjwvc3ZnPg==); }
 
-/* ===== Spinner overlay and small control spinner styles ===== */
+/* ===== Spinner overlay and mini-control spinner styles ===== */
 #global-spinner-overlay {
   position: fixed;
   inset: 0;
@@ -104,7 +108,7 @@ body { background:#fff; min-height:100vh; }
   z-index: 9999;
   transition: opacity 220ms ease;
   opacity: 1;
-  pointer-events: none; /* allow clicking underlying controls while spinner shows */
+  pointer-events: none; /* allow clicks under the overlay for per-control spinners */
 }
 #global-spinner-overlay.hidden {
   opacity: 0;
@@ -150,12 +154,10 @@ body { background:#fff; min-height:100vh; }
   vertical-align:middle;
 }
 
-/* styling for disabled spinner state inside button */
-.disabled-spinner {
-  opacity:0.95;
-}
+/* disabled spinner state inside button */
+.disabled-spinner { opacity:0.95; }
 
-/* visually-hide label placeholder while spinner in button shows */
+/* hidden label placeholder used during spinner */
 .hidden-label { display:none; }
 
 /* highlight animation when scrolled into view */
@@ -168,9 +170,9 @@ body { background:#fff; min-height:100vh; }
   100% { transform: translateY(0); box-shadow: 0 6px 18px rgba(2,6,23,0.04); }
 }
 
-/* Slight polish for investment account presentation */
-.account-item.investment-account .name { font-weight:600; }
-.account-item.investment-account .balance { color:#2a6ef7; }
+/* Small presentation tweaks for investment accounts (match others exactly) */
+.account-item.investment-account .name { font-weight:500; color:#003366; font-size:0.9rem; }
+.account-item.investment-account .balance { color:#003366; font-weight:700; font-size:1.1rem; }
 
-/* small responsive tweak so scrollIntoView works inside the app container */
+/* app container smooth scroll */
 .app-container { scroll-behavior: smooth; }
