@@ -1,0 +1,92 @@
+* { box-sizing:border-box; margin:0; padding:0; font-family:'Libre Franklin', sans-serif; }
+body { background:#fff; min-height:100vh; }
+
+.app-container { max-width:375px; margin:0 auto; box-shadow:0 0 10px rgba(0,0,0,0.1); overflow-y:auto; } 
+
+.screen { display:none; }
+.screen.active { display:block; }
+
+.boa-header { background:#003366; color:#fff; padding:1rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+.logo { height:24px; }
+.greeting { font-size:1.1rem; font-weight:500; color:#333; padding:1rem; background:#fff; } /* Reduced size */
+
+.top-menu { background:#fff; padding:0.5rem; display:flex; justify-content:space-between; font-size:0.8rem; color:#666; border-bottom:1px solid #ddd; }
+.menu-icon, .inbox-icon, .products-icon, .logout-icon { cursor:pointer; }
+
+.accounts-dashboard { background:#fff; display:flex; justify-content:space-between; padding:0.5rem 1rem; font-weight:700; color:#c00; font-size:1rem; }
+.red-line { height:2px; background:#c00; }
+
+.erica-search { background:#fff; padding:0.5rem 1rem; position:relative; }
+.search-input { width:100%; padding:0.6rem; border:1px solid #ddd; border-radius:4px; font-size:1rem; }
+.erica-badge { position:absolute; right:1rem; top:50%; transform:translateY(-50%); background:#c00; color:#fff; border-radius:50%; padding:0.2rem 0.5rem; font-size:0.8rem; font-weight:700; }
+
+.hello-section { background:#fff; padding:0.5rem 1rem; font-size:1.1rem; font-weight:700; color:#333; } /* Smaller Hello */
+
+.life-plan-item, .rewards-item { background:#fff; padding:0.5rem 1rem; border-bottom:1px solid #ddd; display:flex; align-items:center; }
+.circle-icon { font-size:1rem; margin-right:1rem; color:#c00; }
+.item-text { flex:1; }
+.item-title { font-weight:700; color:#003366; font-size:1rem; }
+.item-subtitle { font-size:0.8rem; color:#666; }
+.arrow { color:#ccc; }
+
+.section.banking h2 { background:#c00; color:#fff; padding:0.6rem; font-size:1.1rem; font-weight:700; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; }
+
+.section.credit-cards h2 { background:linear-gradient(to right, #c00, #003366); color:#fff; padding:0.6rem; font-size:1.1rem; font-weight:700; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; }
+
+.section-logo { height:20px; margin:0.5rem 0 0.3rem; display:block; }
+
+.account-list { background:#fff; border-radius:0 0 8px 8px; overflow:hidden; }
+.account-item { padding:0.8rem; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.name { font-weight:500; color:#003366; font-size:0.9rem; }
+.balance { color:#003366; font-weight:700; font-size:1.1rem; margin-left:auto; margin-right:0.5rem; text-align:right; flex-shrink:0; } /* Pushed right */
+
+.view-btn { background:#e6e6e6; color:#003366; border:none; border-radius:20px; padding:0.2rem 0.6rem; font-size:0.6rem; font-weight:500; cursor:pointer; } /* Smaller VIEW */
+
+.open-new { display:block; text-align:center; color:#0066cc; font-weight:500; padding:0.8rem; font-size:0.8rem; } /* Smaller OPEN NEW ACCOUNT */
+
+.section.investments h2 { background:linear-gradient(to right, #c00, #003366); color:#fff; padding:0.6rem; font-size:1.1rem; font-weight:700; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; }
+.section-total { font-weight:700; }
+
+.bottom-nav { position:fixed; bottom:0; left:0; width:100%; background:#fff; display:flex; justify-content:space-around; box-shadow:0 -2px 5px rgba(0,0,0,.1); padding:0.5rem 0; z-index:10; max-width:375px; margin:0 auto; }
+.nav-item { background:none; border:none; cursor:pointer; text-align:center; color:#0066cc; font-size:0.7rem; font-weight:500; }
+.nav-item.active { color:#003366; }
+.nav-icon { display:block; font-size:1rem; margin-bottom:0.2rem; color:#ccc; }
+.nav-item.active .nav-icon { color:#003366; }
+
+.page-content { padding:1.5rem; background:#fff; min-height:80vh; }
+.input-field { width:100%; padding:0.8rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px; }
+.back-btn { background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer; }
+
+.transactions-table { width:100%; border-collapse:collapse; }
+.transactions-table th, .transactions-table td { padding:0.8rem; border-bottom:1px solid #e0e0e0; text-align:left; }
+.transactions-table th { background:#f8f9fa; font-weight:500; color:#333; }
+.transactions-table td { color:#003366; }
+
+.menu-overlay { background:#fff; position:fixed; top:0; left:0; width:100%; height:100%; z-index:20; }
+.menu-list { padding:1rem; }
+.menu-item { display:block; width:100%; padding:1rem; border-bottom:1px solid #ddd; background:none; border:none; text-align:left; font-size:1rem; color:#003366; cursor:pointer; }
+
+.message { padding:1rem; border-bottom:1px solid #ddd; }
+.message-title { font-weight:700; color:#003366; }
+
+.login-header { background:#fff; padding:0.5rem 1rem; display:flex; justify-content:space-between; align-items:center; font-size:1rem; color:#003366; font-weight:700; border-bottom:1px solid #ddd; }
+.log-in-text { color:#666; font-weight:400; }
+.red-banner { background:#c00; color:#fff; padding:0.8rem; font-size:1.1rem; font-weight:500; text-align:center; }
+.login-box { background:#fff; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,.1); }
+.label { font-size:0.9rem; color:#333; margin-bottom:0.3rem; display:block; }
+.input-field { width:100%; padding:0.6rem; border:1px solid #000; border-radius:0; font-size:1rem; }
+.checkbox-group { display:flex; align-items:center; font-size:0.8rem; color:#0066cc; margin-bottom:1rem; }
+.checkbox-group input { margin-right:0.5rem; }
+.help-icon { background:#0066cc; color:#fff; border-radius:50%; padding:0 0.4rem; margin-left:0.5rem; font-size:0.7rem; }
+.forgot-link { color:#0066cc; font-size:0.8rem; display:block; margin-bottom:1rem; }
+.login-btn { background:#0066cc; color:#fff; border:none; border-radius:4px; padding:0.6rem; font-size:1rem; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; } 
+.secure-area { background:#f5f5f5; padding:1rem; margin-top:2rem; font-size:0.8rem; color:#333; text-align:center; }
+.lock-icon { font-weight:700; }
+.privacy-links { color:#0066cc; margin:0.5rem 0; }
+.footer-text { color:#666; }
+.copyright { color:#666; }
+.msg { color:#c00; font-size:0.9rem; text-align:center; margin-top:0.5rem; }
+
+.input-wrapper { position:relative; }
+.icon.eye { position:absolute; right:0.6rem; top:50%; transform:translateY(-50%); cursor:pointer; }
+.icon.eye.off { background-image:url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDI0IDI0JyBmaWxsPScjNjY2Jz48cGF0aCBkPSdNMTIgN2MyLjc2IDAgNSAyLjI0IDUgNSAwIC42NS0uMTMgMS4yNi0uMzYgMS44M2wyLjkyIDIuOTJjMS41MS0xLjIyIDIuNzItMi44MiAzLjQ0LTQuNzVDMjEuMjcgNy42MSAxNy4wMSA0LjUgMTIgNC41Yy0xLjcxIDAtMy4zNC4zNy00LjgzIDEuMDNsMi4xMyAyLjEzQzEwLjc0IDcuMTMgMTEuMzUgNyAxMiA3em04Ljk2IDIuOTZsLTIuMjctMi4yN2MuOTktMS4xNCAxLjc5LTIuNTEgMi4zMS00LjA0QzIxLjczIDcuMzkgMTcuNDcgMTAuNSAxMiAxMC41Yy0uOTUgMC0xLjg2LS4xMS0yLjczLS4zTDcuMSAxMi4zN0M3LjA0IDEyLjU4IDcgMTIuNzkgNyAxM2MwIDIuNzYgMi4yNCA1IDUgNSAxLjIxIDAgMi4zMy0uNDQgMy4xOS0xLjE3bDEuMjcgMS4yN2MtMS4wNSAuNTEtMi4yMiAuOC0zLjQ2IC44LTUuMDEgMC05LjI3LTMuMTEtMTEtNy41IDEuNzMtNC4zOSA2LTcuNSAxMS03LjUgMi4wMiAwIDMuOTQuNTEgNS42NCAxLjM5eicvPjwvc3ZnPg==); }
