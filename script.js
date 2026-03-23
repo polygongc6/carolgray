@@ -1,5 +1,5 @@
 // script.js
-// -- Users (unchanged) --
+// Users (unchanged)
 const USERS = {
   'Dolly': 'tylerluvdolly112',
   'Dianne': 'tylerluvdianne112',
@@ -18,7 +18,7 @@ const show = id => {
   if (target) target.classList.add('active');
 };
 
-// --- Password toggle (unchanged)
+// --- Password toggle
 let pwdVisible = false;
 const togglePwd = $('toggle-pwd');
 if (togglePwd) togglePwd.addEventListener('click', () => {
@@ -28,7 +28,7 @@ if (togglePwd) togglePwd.addEventListener('click', () => {
   togglePwd.classList.toggle('off', !pwdVisible);
 });
 
-// --- Spinner & UX configuration
+// --- Spinner & UX
 const LOGIN_SPINNER_MS = 6000;         // login spinner duration
 const CLICK_WHILE_GLOBAL_MS = 3000;    // per-click spinner while global spinner active
 const TRANSFER_SPINNER_MS = 5000;      // transfer button spinner duration
@@ -36,12 +36,10 @@ const TRANSFER_SPINNER_MS = 5000;      // transfer button spinner duration
 const globalOverlay = document.getElementById('global-spinner-overlay');
 let globalSpinnerActive = false;
 
-// show global spinner for ms milliseconds (visual only; allows clicks to show per-control spinner)
 function showGlobalSpinner(ms = 1000) {
   if (!globalOverlay) return Promise.resolve();
   globalSpinnerActive = true;
   globalOverlay.classList.remove('hidden');
-  // use pointer-events: none in CSS so users can still interact with underlying controls
   return new Promise(resolve => {
     setTimeout(() => {
       globalOverlay.classList.add('hidden');
@@ -51,41 +49,37 @@ function showGlobalSpinner(ms = 1000) {
   });
 }
 
+function formatCurrency(num) {
+  return Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
 function createMiniSpinner() {
   const s = document.createElement('span');
   s.className = 'mini-spinner';
   return s;
 }
 
-// Show a spinner inside a control element for ms milliseconds
+// show spinner inside a control for "ms" milliseconds
 function showControlSpinner(el, ms = 1000) {
   if (!el) return Promise.resolve();
-  // Prevent stacking
   if (el.dataset.spinner === '1') return new Promise(r => setTimeout(r, ms));
   el.dataset.spinner = '1';
   el.classList.add('disabled-spinner');
-  // create and attach mini spinner
+
   const spinner = createMiniSpinner();
-  // if button has text, hide it visually while spinner shows (preserve layout)
-  const label = document.createElement('span');
-  label.className = 'hidden-label';
-  label.textContent = el.textContent || '';
-  // Keep original text hidden for accessibility but maintain spacing
-  el._originalText = el.textContent;
+  const originalText = el.textContent || '';
   el.textContent = '';
   el.appendChild(spinner);
-  el.appendChild(label);
+
   el.setAttribute('aria-busy', 'true');
   el.disabled = true;
+
   return new Promise(resolve => {
     setTimeout(() => {
       el.disabled = false;
       el.removeAttribute('aria-busy');
-      // cleanup
       if (el.contains(spinner)) spinner.remove();
-      if (el.contains(label)) label.remove();
-      el.textContent = el._originalText || '';
-      delete el._originalText;
+      el.textContent = originalText;
       el.classList.remove('disabled-spinner');
       el.dataset.spinner = '0';
       resolve();
@@ -93,10 +87,9 @@ function showControlSpinner(el, ms = 1000) {
   });
 }
 
-// While global spinner is active, clicking any button or .tappable element will show a 3s spinner on it
+// when global spinner active, clicking actionable elements shows a per-control 3s spinner
 document.addEventListener('click', (ev) => {
   if (!globalSpinnerActive) return;
-  // find the actionable element
   const target = ev.target.closest('button, .tappable, .nav-item, .menu-item, .view-btn');
   if (target) {
     ev.preventDefault();
@@ -105,7 +98,7 @@ document.addEventListener('click', (ev) => {
   }
 }, true);
 
-// --- Login flow: show 6s spinner, then validate and navigate
+// --- Login flow: show spinner then check credentials
 const btnLogin = $('btn-login');
 if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   e.preventDefault();
@@ -114,24 +107,19 @@ if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   const msg = $('login-msg');
   if (msg) msg.textContent = '';
 
-  // show the login spinner for configured duration
   await showGlobalSpinner(LOGIN_SPINNER_MS);
 
-  // After spinner finishes, proceed with authentication (case-insensitive lookup)
   const matchedKey = Object.keys(USERS).find(k => k.toLowerCase() === inputRaw.toLowerCase());
   if (matchedKey && USERS[matchedKey] === password) {
-    // set visible names
     const userName = $('user-name');
     if (userName) userName.textContent = matchedKey;
     const welcomeName = $('welcome-name');
     if (welcomeName) welcomeName.textContent = matchedKey;
 
-    // set inbox note (personalized)
     const inboxNote = $('inbox-note');
     if (inboxNote) inboxNote.textContent = `You have 1 new message — Welcome back, ${matchedKey}.`;
 
     show('dashboard');
-    // small settle highlight for the investment section if present
     const inv = document.getElementById('investment-section');
     if (inv) {
       inv.classList.add('in-view-highlight');
@@ -142,7 +130,7 @@ if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   }
 });
 
-// --- Logout (unchanged)
+// --- Logout
 const btnLogout = $('btn-logout');
 if (btnLogout) btnLogout.addEventListener('click', () => {
   show('login');
@@ -151,7 +139,6 @@ if (btnLogout) btnLogout.addEventListener('click', () => {
   const loginPassword = $('login-password');
   if (loginPassword) loginPassword.value = '';
 
-  // clear displayed names and inbox note
   const userName = $('user-name');
   if (userName) userName.textContent = '';
   const welcomeName = $('welcome-name');
@@ -160,11 +147,10 @@ if (btnLogout) btnLogout.addEventListener('click', () => {
   if (inboxNote) inboxNote.textContent = 'You have 1 new message.';
 });
 
-// --- Menu Tap and Menu Items (unchanged behavior)
+// --- Menu Tap and Items
 const menuTap = $('menu-tap');
 if (menuTap) menuTap.addEventListener('click', () => show('menu-screen'));
 
-// Menu Items
 const menuAccounts = $('menu-accounts');
 if (menuAccounts) menuAccounts.addEventListener('click', () => show('dashboard'));
 const menuTransfer = $('menu-transfer');
@@ -177,22 +163,21 @@ const menuDeposit = $('menu-deposit');
 if (menuDeposit) menuDeposit.addEventListener('click', () => show('deposit'));
 const menuInvest = $('menu-invest');
 if (menuInvest) menuInvest.addEventListener('click', () => {
-  // animate to investment area inside dashboard
   show('dashboard');
   setTimeout(() => scrollToInvestment(), 220);
 });
 
-// --- Back buttons
+// Back buttons
 const backMenu = $('back-menu');
 if (backMenu) backMenu.addEventListener('click', () => show('dashboard'));
 const backInbox = $('back-inbox');
 if (backInbox) backInbox.addEventListener('click', () => show('dashboard'));
 
-// --- Inbox Tap
+// Inbox Tap
 const inboxTap = $('inbox-tap');
 if (inboxTap) inboxTap.addEventListener('click', () => show('inbox'));
 
-// --- Bottom Nav behavior (including Invest animated scroll)
+// Bottom nav: invest scroll behavior
 const navTransfer = $('nav-transfer');
 if (navTransfer) navTransfer.addEventListener('click', () => show('transfer'));
 const navBill = $('nav-bill');
@@ -202,98 +187,229 @@ if (navDeposit) navDeposit.addEventListener('click', () => show('deposit'));
 const navInvest = $('nav-invest');
 if (navInvest) navInvest.addEventListener('click', (e) => {
   e.preventDefault();
-  // show dashboard then animate scroll to investment area
   show('dashboard');
   setTimeout(() => scrollToInvestment(), 220);
 });
 
-// helper: smooth scroll and highlight investment section
 function scrollToInvestment() {
   const inv = document.getElementById('investment-section');
   if (!inv) return;
-  // smooth scroll to center of viewport (if inside the app container)
   inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
   inv.classList.add('in-view-highlight');
   setTimeout(() => inv.classList.remove('in-view-highlight'), 1000);
 }
 
-// --- Back from Inbox and other places (unchanged)
-const backZelle = $('back-zelle');
-if (backZelle) backZelle.addEventListener('click', () => show('dashboard'));
-const backTransfer = $('back-transfer');
-if (backTransfer) backTransfer.addEventListener('click', () => show('dashboard'));
-const backDeposit = $('back-deposit');
-if (backDeposit) backDeposit.addEventListener('click', () => show('dashboard'));
-const backBills = $('back-bills');
-if (backBills) backBills.addEventListener('click', () => show('dashboard'));
-const backInvest = $('back-invest');
-if (backInvest) backInvest.addEventListener('click', () => show('dashboard'));
-
-// --- Account taps
+// Account taps (show transactions)
 const checkingCard = $('checking-card');
 if (checkingCard) checkingCard.addEventListener('click', () => show('checking-transactions'));
 const savingsCard = $('savings-card');
 if (savingsCard) savingsCard.addEventListener('click', () => show('savings-transactions'));
 
-// Back from Transactions
-const backChecking = $('back-checking');
-if (backChecking) backChecking.addEventListener('click', () => show('dashboard'));
-const backSavings = $('back-savings');
-if (backSavings) backSavings.addEventListener('click', () => show('dashboard'));
+// View buttons should also show the corresponding transactions view
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    // if the button is inside checking-card or savings-card, show that account transactions
+    const parentAccount = e.target.closest('.account-item');
+    if (!parentAccount) return;
+    const acc = parentAccount.dataset.account;
+    if (acc === 'checking') show('checking-transactions');
+    else if (acc === 'savings') show('savings-transactions');
+    else {
+      // default to dashboard (no-op)
+      show('dashboard');
+    }
+  });
+});
 
-// TRANSFER FEATURE
+// --- Balances management
+const balances = {
+  checking: 80050.00,
+  savings: 250.00
+};
+
+// Utility: update displayed balance element and top banking total
+function updateDisplayedBalances() {
+  document.querySelectorAll('[data-balance]').forEach(el => {
+    // parent account data-account helps map which balance to use
+    const parent = el.closest('.account-item');
+    if (parent && parent.dataset && parent.dataset.account) {
+      const key = parent.dataset.account;
+      if (balances.hasOwnProperty(key)) {
+        el.textContent = formatCurrency(balances[key]);
+      }
+    } else {
+      // fallback: if element is inside the banking section but not mapped, leave as-is
+    }
+  });
+
+  // Update main banking total
+  const bankingTotalEl = document.querySelector('.section.banking .section-total');
+  if (bankingTotalEl) {
+    const total = (balances.checking || 0) + (balances.savings || 0);
+    bankingTotalEl.textContent = formatCurrency(total);
+  }
+
+  // Update transactions top rows display amounts (optional - keep consistent)
+  // (We won't overwrite historical rows here except when adding pending)
+}
+
+// initialize displayed balances from our balances object
+updateDisplayedBalances();
+
+// --- Transfer logic
 let selectedFromAccount = null;
-
 const transferChecking = $('transfer-checking');
 const transferSavings = $('transfer-savings');
 
-if (transferChecking) {
-  transferChecking.addEventListener('click', () => {
-    selectedFromAccount = 'checking';
-    transferChecking.style.background = '#e6e6e6';
-    if (transferSavings) transferSavings.style.background = '';
-  });
-}
-if (transferSavings) {
-  transferSavings.addEventListener('click', () => {
-    selectedFromAccount = 'savings';
-    transferSavings.style.background = '#e6e6e6';
-    if (transferChecking) transferChecking.style.background = '';
-  });
+function selectFromAccount(accountEl) {
+  if (!accountEl) return;
+  const acc = accountEl.dataset.account;
+  selectedFromAccount = acc;
+  // highlight
+  [transferChecking, transferSavings].forEach(el => { if (el) el.style.background = ''; });
+  accountEl.style.background = '#e6e6e6';
 }
 
+if (transferChecking) {
+  transferChecking.addEventListener('click', () => selectFromAccount(transferChecking));
+}
+if (transferSavings) {
+  transferSavings.addEventListener('click', () => selectFromAccount(transferSavings));
+}
+
+// helper: insert pending transaction row into the correct tbody
+function addPendingTransaction(accountKey, beneficiaryName, amount) {
+  // format date in Atlanta (America/New_York) timezone
+  const now = new Date();
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  });
+  const formattedDate = dtf.format(now);
+
+  // build row markup
+  const tr = document.createElement('tr');
+  const tdDate = document.createElement('td');
+  const tdDesc = document.createElement('td');
+  const tdAmt = document.createElement('td');
+
+  tdDate.className = 'tx-date';
+  tdDate.textContent = formattedDate;
+
+  // put beneficiary name in the description and mark as pending
+  tdDesc.textContent = `${beneficiaryName} (Pending)`;
+
+  // show negative amount for transfer (deduction)
+  tdAmt.textContent = formatCurrency(-Math.abs(amount));
+
+  tr.appendChild(tdDate);
+  tr.appendChild(tdDesc);
+  tr.appendChild(tdAmt);
+
+  if (accountKey === 'checking') {
+    const tb = $('checking-tbody');
+    if (tb) tb.insertBefore(tr, tb.firstChild);
+  } else if (accountKey === 'savings') {
+    const tb = $('savings-tbody');
+    if (tb) tb.insertBefore(tr, tb.firstChild);
+  }
+}
+
+// Transfer button handler
 const btnTransfer = $('btn-transfer');
 if (btnTransfer) btnTransfer.addEventListener('click', async (ev) => {
   ev.preventDefault();
-  // show 5s spinner on the transfer button then show the existing alert message
+
+  const beneficiaryName = ( $('beneficiary-name') ? $('beneficiary-name').value.trim() : '' );
+  const beneficiaryBank = ( $('beneficiary-bank') ? $('beneficiary-bank').value.trim() : '' );
+  const routingNumber = ( $('routing-number') ? $('routing-number').value.trim() : '' );
+  const accountNumber = ( $('account-number') ? $('account-number').value.trim() : '' );
+  const amountRaw = ( $('transfer-amount') ? $('transfer-amount').value : '' );
+  const transferMsgEl = $('transfer-msg');
+
+  // validate required fields
+  if (!selectedFromAccount || !beneficiaryName || !beneficiaryBank || !routingNumber || !accountNumber || !amountRaw) {
+    // show "Input details"
+    if (transferMsgEl) {
+      transferMsgEl.style.display = 'block';
+      transferMsgEl.textContent = 'Input details';
+      setTimeout(() => { if (transferMsgEl) transferMsgEl.style.display = 'none'; }, 2500);
+    } else {
+      alert('Input details');
+    }
+    return;
+  }
+
+  const amount = Number(amountRaw);
+  if (!(amount > 0)) {
+    if (transferMsgEl) {
+      transferMsgEl.style.display = 'block';
+      transferMsgEl.textContent = 'Enter a valid amount';
+      setTimeout(() => { if (transferMsgEl) transferMsgEl.style.display = 'none'; }, 2500);
+    } else {
+      alert('Enter a valid amount');
+    }
+    return;
+  }
+
+  // check available balance
+  const available = balances[selectedFromAccount] || 0;
+  if (amount > available) {
+    if (transferMsgEl) {
+      transferMsgEl.style.display = 'block';
+      transferMsgEl.textContent = 'Insufficient funds';
+      setTimeout(() => { if (transferMsgEl) transferMsgEl.style.display = 'none'; }, 3000);
+    } else {
+      alert('Insufficient funds');
+    }
+    return;
+  }
+
+  // show 5s spinner on the transfer button before showing confirmation
   await showControlSpinner(btnTransfer, TRANSFER_SPINNER_MS);
 
-  // After spinner, show the identity verification message (kept unchanged content)
-  alert("An Identity verification is needed to complete this transaction.\n\nTo confirm that you are Carol Gray, make a deposit of $1450.00 from another bank account bearing your name to the checking Account 6682 to complete the transaction");
+  // deduct amount from balance right now
+  balances[selectedFromAccount] = +( (balances[selectedFromAccount] || 0) - amount ).toFixed(2);
+  updateDisplayedBalances();
+
+  // add pending transaction into the selected account's transactions list
+  addPendingTransaction(selectedFromAccount, beneficiaryName, amount);
+
+  // build the confirmation message text exactly as requested, with beneficiary in parentheses
+  // pick the account ending string for the message
+  const accountEnding = selectedFromAccount === 'checking' ? '6682' : (selectedFromAccount === 'savings' ? '6705' : '6682');
+  const formattedAmt = formatCurrency(amount);
+
+  const confirmationText = `Identity confirmation step required!\nMake a deposit of ${formattedAmt} from an external bank account registered in your name (Carol Gray) to Checking Account ending ${accountEnding}.\nThe transfer made to (${beneficiaryName}) will be held pending until verification is completed`;
+
+  // show as an alert (keeps the exact content style you requested). You can change to an in-app toast if desired.
+  alert(confirmationText);
+
+  // Optionally, update any on-screen messages
+  if (transferMsgEl) {
+    transferMsgEl.style.display = 'block';
+    transferMsgEl.textContent = 'Transfer pending verification';
+    setTimeout(() => { if (transferMsgEl) transferMsgEl.style.display = 'none'; }, 3000);
+  }
 });
 
-// --- Remove small bank images (already removed in HTML, but double-check for any runtime images)
-function removeSmallBankImages() {
-  // remove any logos that may still be inserted dynamically with names "Merrill" or "Bank of America"
+// Remove small logo images if any remain (defensive)
+function removeSmallLogos() {
   document.querySelectorAll('.section-logo').forEach(img => img.remove());
 }
-removeSmallBankImages();
+removeSmallLogos();
 
-// --- Normalize transaction dates across pages to March 21, 2026 (ensures all table date cells and any .tx-date are changed)
+// Normalize transaction dates on load to March 21, 2026 for existing historical rows
 function normalizeAllTransactionDates() {
-  // for table cells with class tx-date
   document.querySelectorAll('.tx-date').forEach(td => td.textContent = 'March 21, 2026');
-
-  // any other date cells (defensive)
-  document.querySelectorAll('table.transactions-table td:first-child').forEach((td) => {
-    td.textContent = 'March 21, 2026';
-  });
 }
 normalizeAllTransactionDates();
 
-// --- Initialization: small polish (no changes to existing content)
+// Small initialization polish
 document.addEventListener('DOMContentLoaded', () => {
-  // if user is already on dashboard, ensure investment highlight set once
+  // ensure balances displayed correctly at start
+  updateDisplayedBalances();
   const inv = document.getElementById('investment-section');
   if (inv && document.querySelector('#dashboard.active')) {
     inv.classList.add('in-view-highlight');
