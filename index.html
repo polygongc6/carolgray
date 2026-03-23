@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<!-- GLOBAL SPINNER OVERLAY (visual, does not block underlying controls) -->
+<!-- GLOBAL SPINNER OVERLAY (visual, non-blocking so per-control spinners show) -->
 <div id="global-spinner-overlay" class="hidden" aria-hidden="true">
   <div class="spinner-card" role="status" aria-live="polite">
     <div class="spinner"></div>
@@ -83,20 +83,20 @@
   </div>
 
   <div class="section banking">
-    <h2>Banking <span class="section-total">$90,150.00</span></h2>
+    <h2>Banking <span class="section-total">$80,300.00</span></h2>
     <div class="account-list">
-      <div id="checking-card" class="account-item tappable">
+      <div id="checking-card" class="account-item tappable" data-account="checking">
         <div class="account-info">
           <div class="name">Adv SafeBalance<br>Banking -6682</div>
         </div>
-        <div class="balance">$40,120.00</div>
+        <div class="balance" data-balance>$80,050.00</div>
         <button class="view-btn">VIEW</button>
       </div>
-      <div id="savings-card" class="account-item tappable">
+      <div id="savings-card" class="account-item tappable" data-account="savings">
         <div class="account-info">
           <div class="name">Advantage Savings<br>-6705</div>
         </div>
-        <div class="balance">$50,030.00</div>
+        <div class="balance" data-balance>$250.00</div>
         <button class="view-btn">VIEW</button>
       </div>
       <button class="open-new">OPEN NEW ACCOUNT</button>
@@ -106,7 +106,7 @@
   <div class="section credit-cards">
     <h2>Credit Cards <span class="section-total">$195.00</span></h2>
     <div class="account-list">
-      <!-- Removed small logo image as requested -->
+      <!-- small logos removed -->
       <div class="account-item">
         <div class="name">Customized Cash<br>Rewards Visa Signature -4028</div>
         <div class="balance">$135.00</div>
@@ -123,8 +123,8 @@
   <div class="section investments" id="investment-section">
     <h2>Investments <span class="section-total">$0.00</span></h2>
     <div class="account-list">
-      <!-- Removed Merrill logo image as requested -->
-      <!-- Two investment accounts matching banking/credit card style with $0 balance -->
+      <!-- Merrill logo removed -->
+      <!-- Investment accounts matching style / font of other account items -->
       <div class="account-item investment-account">
         <div class="account-info">
           <div class="name">Mortgage Investment Account<br>-9911</div>
@@ -212,7 +212,7 @@
   </div>
 </div>
 
-<!-- TRANSFER PAGE - UPDATED WITH REQUESTED SPINNER FLOW -->
+<!-- TRANSFER PAGE - UPDATED WITH REQUESTED SPINNER FLOW AND VALIDATION -->
 <div id="transfer" class="screen">
   <header class="boa-header">
     <button class="back-btn" id="back-transfer">&larr; Back</button>
@@ -221,17 +221,17 @@
   <div class="page-content">
     <label class="label">Select From Account (tap one)</label>
     <div id="transfer-from-list" class="account-list">
-      <div id="transfer-checking" class="account-item tappable">
+      <div id="transfer-checking" class="account-item tappable" data-account="checking">
         <div class="account-info">
           <div class="name">Adv SafeBalance<br>Banking -6682</div>
         </div>
-        <div class="balance">$40,120.00</div>
+        <div class="balance" data-balance>$80,050.00</div>
       </div>
-      <div id="transfer-savings" class="account-item tappable">
+      <div id="transfer-savings" class="account-item tappable" data-account="savings">
         <div class="account-info">
           <div class="name">Advantage Savings<br>-6705</div>
         </div>
-        <div class="balance">$50,030.00</div>
+        <div class="balance" data-balance>$250.00</div>
       </div>
     </div>
 
@@ -250,6 +250,7 @@
     <label class="label">Amount</label>
     <input type="number" id="transfer-amount" class="input-field" placeholder="$0.00"/>
 
+    <p id="transfer-msg" class="msg" style="display:none;"></p>
     <button id="btn-transfer" class="login-btn">Transfer</button>
     <p>Move funds between accounts</p>
   </div>
@@ -313,11 +314,11 @@
           <th>Amount</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="checking-tbody">
         <tr>
           <td class="tx-date">March 21, 2026</td>
           <td>Deposit</td>
-          <td>$40,120.00</td>
+          <td>$80,050.00</td>
         </tr>
       </tbody>
     </table>
@@ -339,11 +340,11 @@
           <th>Amount</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="savings-tbody">
         <tr>
           <td class="tx-date">March 21, 2026</td>
           <td>Deposit</td>
-          <td>$50,030.00</td>
+          <td>$250.00</td>
         </tr>
       </tbody>
     </table>
