@@ -1,5 +1,9 @@
-// script.js
-// Users (unchanged)
+// script.js (updated)
+// - Fixes Back button navigation by using a navigation stack
+// - Adds per-user persistent state (localStorage) to store balances & transactions
+// - Ensures each user has isolated state and changes persist across reloads
+
+// USERS (unchanged)
 const USERS = {
   'Dolly': 'tylerluvdolly112',
   'Dianne': 'tylerluvdianne112',
@@ -11,24 +15,214 @@ const USERS = {
   'Carol': 'tylerluvcarol112'
 };
 
+// Basic helpers
 const $ = id => document.getElementById(id);
-const show = id => {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = $(id);
-  if (target) target.classList.add('active');
-};
+const allScreens = () => Array.from(document.querySelectorAll('.screen'));
 
-// --- Password toggle
-let pwdVisible = false;
-const togglePwd = $('toggle-pwd');
-if (togglePwd) togglePwd.addEventListener('click', () => {
-  pwdVisible = !pwdVisible;
-  const input = $('login-password');
-  if (input) input.type = pwdVisible ? 'text' : 'password';
-  togglePwd.classList.toggle('off', !pwdVisible);
+// Navigation stack for back behavior
+let navStack = ['login']; // start at login
+let currentUser = null;   // username string after login (e.g. 'Carol')
+let userState = null;     // in-memory object representing current user's state
+
+// Default initial state for new users
+function defaultState() {
+  return {
+    balances: {
+      checking: 80050.00, // -6682
+      savings: 250.00     // -6705
+    },
+    // transactions arrays: newest at index 0
+    transactions: {
+      checking: [ // sample existing deposit row retained
+        { date: 'March 21, 2026', desc: 'Deposit', amount: 80050.00 }
+      ],
+      savings: [
+        { date: 'March 21, 2026', desc: 'Deposit', amount: 250.00 }
+      ],
+      investments: [] // empty initially
+    }
+  };
+}
+
+// Storage helpers
+function storageKeyForUser(username) {
+  return `carolgray_state_${username}`;
+}
+function saveStateToStorage() {
+  if (!currentUser || !userState) return;
+  try {
+    localStorage.setItem(storageKeyForUser(currentUser), JSON.stringify(userState));
+  } catch (e) {
+    console.warn('Failed to save user state', e);
+  }
+}
+function loadStateFromStorage(username) {
+  if (!username) return null;
+  try {
+    const raw = localStorage.getItem(storageKeyForUser(username));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to load user state', e);
+    return null;
+  }
+}
+
+// Navigation functions
+function show(screenId, push = true) {
+  // remove active from all screens
+  allScreens().forEach(s => s.classList.remove('active'));
+  const target = $(screenId);
+  if (!target) return;
+  target.classList.add('active');
+
+  if (push) {
+    // if the screen at top is same as target, don't duplicate
+    const top = navStack[navStack.length - 1];
+    if (top !== screenId) navStack.push(screenId);
+  }
+}
+
+function goBack() {
+  if (navStack.length <= 1) {
+    // nothing to pop: stay on current or default to dashboard
+    show('dashboard', false);
+    navStack = ['dashboard'];
+    return;
+  }
+  // pop current
+  navStack.pop();
+  const prev = navStack[navStack.length - 1] || 'dashboard';
+  show(prev, false);
+}
+
+// Attach delegated handler for any .back-btn so it always triggers goBack()
+document.addEventListener('click', (ev) => {
+  const back = ev.target.closest('.back-btn');
+  if (back) {
+    ev.preventDefault();
+    goBack();
+  }
 });
 
-// --- Spinner & UX
+// A safe wrapper which both shows and pushes nav (use where appropriate)
+function navigateTo(screenId) {
+  show(screenId, true);
+}
+
+// Format currency helper
+function formatCurrency(num) {
+  return Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
+// Render functions based on userState
+function renderBalancesAndTotals() {
+  if (!userState) return;
+  // Update each [data-balance] element mapping to its .account-item parent dataset.account
+  document.querySelectorAll('[data-balance]').forEach(el => {
+    const parent = el.closest('.account-item');
+    if (parent && parent.dataset && parent.dataset.account) {
+      const key = parent.dataset.account;
+      if (userState.balances.hasOwnProperty(key)) {
+        el.textContent = formatCurrency(userState.balances[key]);
+      }
+    }
+  });
+
+  // update the banking total
+  const bankingTotalEl = document.querySelector('.section.banking .section-total');
+  if (bankingTotalEl) {
+    const total = (userState.balances.checking || 0) + (userState.balances.savings || 0);
+    bankingTotalEl.textContent = formatCurrency(total);
+  }
+}
+
+function renderTransactionsTable(accountKey) {
+  if (!userState || !accountKey) return;
+  const tbodyId = accountKey === 'checking' ? 'checking-tbody' : (accountKey === 'savings' ? 'savings-tbody' : null);
+  if (!tbodyId) return;
+  const tbody = $(tbodyId);
+  if (!tbody) return;
+  // Clear
+  tbody.innerHTML = '';
+  // Use saved transactions list
+  const list = (userState.transactions && userState.transactions[accountKey]) ? userState.transactions[accountKey] : [];
+  list.forEach(tx => {
+    const tr = document.createElement('tr');
+    const tdDate = document.createElement('td');
+    tdDate.className = 'tx-date';
+    tdDate.textContent = tx.date;
+    const tdDesc = document.createElement('td');
+    tdDesc.textContent = tx.desc;
+    const tdAmt = document.createElement('td');
+    // Ensure deposits/credits appear positive, outgoing transfers negative
+    const amountNum = Number(tx.amount) || 0;
+    tdAmt.textContent = (amountNum < 0) ? formatCurrency(amountNum) : formatCurrency(amountNum);
+    tr.appendChild(tdDate);
+    tr.appendChild(tdDesc);
+    tr.appendChild(tdAmt);
+    tbody.appendChild(tr);
+  });
+}
+
+// Add pending transaction into state and render immediately (and save)
+function addPendingTransactionToState(accountKey, beneficiaryName, amount) {
+  if (!userState || !accountKey) return;
+  // Date formatting in Atlanta time (America/New_York)
+  const now = new Date();
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  });
+  const formattedDate = dtf.format(now);
+  const tx = {
+    date: formattedDate,
+    desc: `${beneficiaryName} (Pending)`,
+    amount: -Math.abs(Number(amount))
+  };
+  // Ensure arrays exist
+  if (!userState.transactions) userState.transactions = {};
+  if (!userState.transactions[accountKey]) userState.transactions[accountKey] = [];
+  // insert at top
+  userState.transactions[accountKey].unshift(tx);
+  saveStateToStorage();
+  // If the transactions screen for that account is visible, re-render
+  if ((accountKey === 'checking' && document.querySelector('#checking-transactions.active')) ||
+      (accountKey === 'savings' && document.querySelector('#savings-transactions.active'))) {
+    renderTransactionsTable(accountKey);
+  }
+}
+
+// Update balance in state and save
+function deductFromBalance(accountKey, amount) {
+  if (!userState || !accountKey) return;
+  if (!userState.balances) userState.balances = {};
+  userState.balances[accountKey] = +( (userState.balances[accountKey] || 0) - Number(amount) ).toFixed(2);
+  saveStateToStorage();
+  renderBalancesAndTotals();
+}
+
+// Load user state on login (or create default if missing)
+function loadOrCreateUserState(username) {
+  let st = loadStateFromStorage(username);
+  if (!st) {
+    st = defaultState();
+    try { localStorage.setItem(storageKeyForUser(username), JSON.stringify(st)); } catch (e) { console.warn('save fail', e); }
+  }
+  return st;
+}
+
+// Clear current user (logout)
+function clearCurrentUser() {
+  currentUser = null;
+  userState = null;
+  // reset nav stack to login
+  navStack = ['login'];
+  show('login', false);
+}
+
+// ----------------- Spinner & existing UX (kept, but wired into new state) -----------------
 const LOGIN_SPINNER_MS = 6000;         // login spinner duration
 const CLICK_WHILE_GLOBAL_MS = 3000;    // per-click spinner while global spinner active
 const TRANSFER_SPINNER_MS = 5000;      // transfer button spinner duration
@@ -49,17 +243,12 @@ function showGlobalSpinner(ms = 1000) {
   });
 }
 
-function formatCurrency(num) {
-  return Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-}
-
 function createMiniSpinner() {
   const s = document.createElement('span');
   s.className = 'mini-spinner';
   return s;
 }
 
-// show spinner inside a control for "ms" milliseconds
 function showControlSpinner(el, ms = 1000) {
   if (!el) return Promise.resolve();
   if (el.dataset.spinner === '1') return new Promise(r => setTimeout(r, ms));
@@ -87,7 +276,7 @@ function showControlSpinner(el, ms = 1000) {
   });
 }
 
-// when global spinner active, clicking actionable elements shows a per-control 3s spinner
+// While global spinner active, clicking actionable elements shows per-control spinner
 document.addEventListener('click', (ev) => {
   if (!globalSpinnerActive) return;
   const target = ev.target.closest('button, .tappable, .nav-item, .menu-item, .view-btn');
@@ -98,7 +287,7 @@ document.addEventListener('click', (ev) => {
   }
 }, true);
 
-// --- Login flow: show spinner then check credentials
+// ----------------- Login / Logout wiring with persistent user state -----------------
 const btnLogin = $('btn-login');
 if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   e.preventDefault();
@@ -107,10 +296,16 @@ if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   const msg = $('login-msg');
   if (msg) msg.textContent = '';
 
+  // show login spinner first
   await showGlobalSpinner(LOGIN_SPINNER_MS);
 
   const matchedKey = Object.keys(USERS).find(k => k.toLowerCase() === inputRaw.toLowerCase());
   if (matchedKey && USERS[matchedKey] === password) {
+    // set current user and load state
+    currentUser = matchedKey;
+    userState = loadOrCreateUserState(currentUser);
+
+    // set visible names
     const userName = $('user-name');
     if (userName) userName.textContent = matchedKey;
     const welcomeName = $('welcome-name');
@@ -119,7 +314,15 @@ if (btnLogin) btnLogin.addEventListener('click', async (e) => {
     const inboxNote = $('inbox-note');
     if (inboxNote) inboxNote.textContent = `You have 1 new message — Welcome back, ${matchedKey}.`;
 
-    show('dashboard');
+    // render from state
+    renderBalancesAndTotals();
+    renderTransactionsTable('checking');
+    renderTransactionsTable('savings');
+
+    // navigate to dashboard
+    show('dashboard', true);
+
+    // highlight investment section briefly
     const inv = document.getElementById('investment-section');
     if (inv) {
       inv.classList.add('in-view-highlight');
@@ -130,64 +333,51 @@ if (btnLogin) btnLogin.addEventListener('click', async (e) => {
   }
 });
 
-// --- Logout
+// Logout
 const btnLogout = $('btn-logout');
 if (btnLogout) btnLogout.addEventListener('click', () => {
-  show('login');
-  const loginUsername = $('login-username');
-  if (loginUsername) loginUsername.value = '';
-  const loginPassword = $('login-password');
-  if (loginPassword) loginPassword.value = '';
-
-  const userName = $('user-name');
-  if (userName) userName.textContent = '';
-  const welcomeName = $('welcome-name');
-  if (welcomeName) welcomeName.textContent = '';
-  const inboxNote = $('inbox-note');
-  if (inboxNote) inboxNote.textContent = 'You have 1 new message.';
+  // commit any pending state
+  saveStateToStorage();
+  // clear user and reset
+  clearCurrentUser();
 });
 
-// --- Menu Tap and Items
+// ----------------- Menu and navigation triggers -----------------
 const menuTap = $('menu-tap');
-if (menuTap) menuTap.addEventListener('click', () => show('menu-screen'));
+if (menuTap) menuTap.addEventListener('click', () => show('menu-screen', true));
 
+// Menu items
 const menuAccounts = $('menu-accounts');
-if (menuAccounts) menuAccounts.addEventListener('click', () => show('dashboard'));
+if (menuAccounts) menuAccounts.addEventListener('click', () => show('dashboard', true));
 const menuTransfer = $('menu-transfer');
-if (menuTransfer) menuTransfer.addEventListener('click', () => show('transfer'));
+if (menuTransfer) menuTransfer.addEventListener('click', () => show('transfer', true));
 const menuZelle = $('menu-zelle');
-if (menuZelle) menuZelle.addEventListener('click', () => show('zelle'));
+if (menuZelle) menuZelle.addEventListener('click', () => show('zelle', true));
 const menuBill = $('menu-bill');
-if (menuBill) menuBill.addEventListener('click', () => show('bills'));
+if (menuBill) menuBill.addEventListener('click', () => show('bills', true));
 const menuDeposit = $('menu-deposit');
-if (menuDeposit) menuDeposit.addEventListener('click', () => show('deposit'));
+if (menuDeposit) menuDeposit.addEventListener('click', () => show('deposit', true));
 const menuInvest = $('menu-invest');
 if (menuInvest) menuInvest.addEventListener('click', () => {
-  show('dashboard');
+  show('dashboard', true);
   setTimeout(() => scrollToInvestment(), 220);
 });
 
-// Back buttons
-const backMenu = $('back-menu');
-if (backMenu) backMenu.addEventListener('click', () => show('dashboard'));
-const backInbox = $('back-inbox');
-if (backInbox) backInbox.addEventListener('click', () => show('dashboard'));
-
-// Inbox Tap
+// Inbox tap
 const inboxTap = $('inbox-tap');
-if (inboxTap) inboxTap.addEventListener('click', () => show('inbox'));
+if (inboxTap) inboxTap.addEventListener('click', () => show('inbox', true));
 
-// Bottom nav: invest scroll behavior
+// Bottom nav
 const navTransfer = $('nav-transfer');
-if (navTransfer) navTransfer.addEventListener('click', () => show('transfer'));
+if (navTransfer) navTransfer.addEventListener('click', () => show('transfer', true));
 const navBill = $('nav-bill');
-if (navBill) navBill.addEventListener('click', () => show('bills'));
+if (navBill) navBill.addEventListener('click', () => show('bills', true));
 const navDeposit = $('nav-deposit');
-if (navDeposit) navDeposit.addEventListener('click', () => show('deposit'));
+if (navDeposit) navDeposit.addEventListener('click', () => show('deposit', true));
 const navInvest = $('nav-invest');
 if (navInvest) navInvest.addEventListener('click', (e) => {
   e.preventDefault();
-  show('dashboard');
+  show('dashboard', true);
   setTimeout(() => scrollToInvestment(), 220);
 });
 
@@ -199,138 +389,84 @@ function scrollToInvestment() {
   setTimeout(() => inv.classList.remove('in-view-highlight'), 1000);
 }
 
-// Account taps (show transactions)
-const checkingCard = $('checking-card');
-if (checkingCard) checkingCard.addEventListener('click', () => show('checking-transactions'));
-const savingsCard = $('savings-card');
-if (savingsCard) savingsCard.addEventListener('click', () => show('savings-transactions'));
+// Back and other back buttons: handled by delegated listener earlier (goBack)
 
-// View buttons should also show the corresponding transactions view
+// Account views and view-btn handlers
+const checkingCard = $('checking-card');
+if (checkingCard) checkingCard.addEventListener('click', () => show('checking-transactions', true));
+const savingsCard = $('savings-card');
+if (savingsCard) savingsCard.addEventListener('click', () => show('savings-transactions', true));
+
+// Hook up all .view-btn buttons to show the correct transactions screen and push nav
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
-    // if the button is inside checking-card or savings-card, show that account transactions
-    const parentAccount = e.target.closest('.account-item');
-    if (!parentAccount) return;
-    const acc = parentAccount.dataset.account;
-    if (acc === 'checking') show('checking-transactions');
-    else if (acc === 'savings') show('savings-transactions');
-    else {
-      // default to dashboard (no-op)
-      show('dashboard');
-    }
+    const parent = e.target.closest('.account-item');
+    if (!parent) return;
+    const acc = parent.dataset.account;
+    if (acc === 'checking') show('checking-transactions', true);
+    else if (acc === 'savings') show('savings-transactions', true);
+    else show('dashboard', true);
   });
 });
 
-// --- Balances management
-const balances = {
-  checking: 80050.00,
-  savings: 250.00
-};
-
-// Utility: update displayed balance element and top banking total
-function updateDisplayedBalances() {
-  document.querySelectorAll('[data-balance]').forEach(el => {
-    // parent account data-account helps map which balance to use
-    const parent = el.closest('.account-item');
-    if (parent && parent.dataset && parent.dataset.account) {
-      const key = parent.dataset.account;
-      if (balances.hasOwnProperty(key)) {
-        el.textContent = formatCurrency(balances[key]);
-      }
-    } else {
-      // fallback: if element is inside the banking section but not mapped, leave as-is
-    }
-  });
-
-  // Update main banking total
-  const bankingTotalEl = document.querySelector('.section.banking .section-total');
-  if (bankingTotalEl) {
-    const total = (balances.checking || 0) + (balances.savings || 0);
-    bankingTotalEl.textContent = formatCurrency(total);
+// ----------------- Balances object and update routing via userState -----------------
+// We no longer use a separate balances object -- userState.balances is authoritative.
+// Provide a helper to safely access current balances (fallback to defaults)
+function ensureUserStateLoaded() {
+  if (!userState) {
+    // if no logged in user, do nothing
+    return false;
   }
-
-  // Update transactions top rows display amounts (optional - keep consistent)
-  // (We won't overwrite historical rows here except when adding pending)
+  if (!userState.balances) userState.balances = { checking: 80050.00, savings: 250.00 };
+  if (!userState.transactions) userState.transactions = { checking: [], savings: [], investments: [] };
+  return true;
 }
 
-// initialize displayed balances from our balances object
-updateDisplayedBalances();
+// Initialize balance UI from userState
+function updateDisplayedBalancesFromState() {
+  if (!ensureUserStateLoaded()) return;
+  renderBalancesAndTotals();
+}
 
-// --- Transfer logic
+// ----------------- Transfer logic (validation, 5s spinner, deduction, pending tx) -----------------
 let selectedFromAccount = null;
-const transferChecking = $('transfer-checking');
-const transferSavings = $('transfer-savings');
+const transferCheckingEl = $('transfer-checking');
+const transferSavingsEl = $('transfer-savings');
 
-function selectFromAccount(accountEl) {
-  if (!accountEl) return;
-  const acc = accountEl.dataset.account;
-  selectedFromAccount = acc;
-  // highlight
-  [transferChecking, transferSavings].forEach(el => { if (el) el.style.background = ''; });
-  accountEl.style.background = '#e6e6e6';
+function selectFromAccountEl(el) {
+  if (!el) return;
+  selectedFromAccount = el.dataset.account;
+  // visual highlight
+  [transferCheckingEl, transferSavingsEl].forEach(x => { if (x) x.style.background = ''; });
+  el.style.background = '#e6e6e6';
 }
 
-if (transferChecking) {
-  transferChecking.addEventListener('click', () => selectFromAccount(transferChecking));
-}
-if (transferSavings) {
-  transferSavings.addEventListener('click', () => selectFromAccount(transferSavings));
-}
+if (transferCheckingEl) transferCheckingEl.addEventListener('click', () => selectFromAccountEl(transferCheckingEl));
+if (transferSavingsEl) transferSavingsEl.addEventListener('click', () => selectFromAccountEl(transferSavingsEl));
 
-// helper: insert pending transaction row into the correct tbody
 function addPendingTransaction(accountKey, beneficiaryName, amount) {
-  // format date in Atlanta (America/New_York) timezone
-  const now = new Date();
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric', month: 'long', day: 'numeric',
-    hour: 'numeric', minute: '2-digit', hour12: true
-  });
-  const formattedDate = dtf.format(now);
-
-  // build row markup
-  const tr = document.createElement('tr');
-  const tdDate = document.createElement('td');
-  const tdDesc = document.createElement('td');
-  const tdAmt = document.createElement('td');
-
-  tdDate.className = 'tx-date';
-  tdDate.textContent = formattedDate;
-
-  // put beneficiary name in the description and mark as pending
-  tdDesc.textContent = `${beneficiaryName} (Pending)`;
-
-  // show negative amount for transfer (deduction)
-  tdAmt.textContent = formatCurrency(-Math.abs(amount));
-
-  tr.appendChild(tdDate);
-  tr.appendChild(tdDesc);
-  tr.appendChild(tdAmt);
-
-  if (accountKey === 'checking') {
-    const tb = $('checking-tbody');
-    if (tb) tb.insertBefore(tr, tb.firstChild);
-  } else if (accountKey === 'savings') {
-    const tb = $('savings-tbody');
-    if (tb) tb.insertBefore(tr, tb.firstChild);
-  }
+  addPendingTransactionToState(accountKey, beneficiaryName, amount);
 }
 
-// Transfer button handler
+// Transfer button
 const btnTransfer = $('btn-transfer');
 if (btnTransfer) btnTransfer.addEventListener('click', async (ev) => {
   ev.preventDefault();
+  if (!currentUser) {
+    alert('Please log in first');
+    return;
+  }
+  // ensure state
+  ensureUserStateLoaded();
 
-  const beneficiaryName = ( $('beneficiary-name') ? $('beneficiary-name').value.trim() : '' );
-  const beneficiaryBank = ( $('beneficiary-bank') ? $('beneficiary-bank').value.trim() : '' );
-  const routingNumber = ( $('routing-number') ? $('routing-number').value.trim() : '' );
-  const accountNumber = ( $('account-number') ? $('account-number').value.trim() : '' );
-  const amountRaw = ( $('transfer-amount') ? $('transfer-amount').value : '' );
+  const beneficiaryName = ($('beneficiary-name') ? $('beneficiary-name').value.trim() : '');
+  const beneficiaryBank = ($('beneficiary-bank') ? $('beneficiary-bank').value.trim() : '');
+  const routingNumber = ($('routing-number') ? $('routing-number').value.trim() : '');
+  const accountNumber = ($('account-number') ? $('account-number').value.trim() : '');
+  const amountRaw = ($('transfer-amount') ? $('transfer-amount').value : '');
   const transferMsgEl = $('transfer-msg');
 
-  // validate required fields
   if (!selectedFromAccount || !beneficiaryName || !beneficiaryBank || !routingNumber || !accountNumber || !amountRaw) {
-    // show "Input details"
     if (transferMsgEl) {
       transferMsgEl.style.display = 'block';
       transferMsgEl.textContent = 'Input details';
@@ -353,8 +489,8 @@ if (btnTransfer) btnTransfer.addEventListener('click', async (ev) => {
     return;
   }
 
-  // check available balance
-  const available = balances[selectedFromAccount] || 0;
+  // check balance in userState
+  const available = (userState && userState.balances && userState.balances[selectedFromAccount]) ? userState.balances[selectedFromAccount] : 0;
   if (amount > available) {
     if (transferMsgEl) {
       transferMsgEl.style.display = 'block';
@@ -366,53 +502,71 @@ if (btnTransfer) btnTransfer.addEventListener('click', async (ev) => {
     return;
   }
 
-  // show 5s spinner on the transfer button before showing confirmation
+  // show 5s spinner on the transfer button
   await showControlSpinner(btnTransfer, TRANSFER_SPINNER_MS);
 
-  // deduct amount from balance right now
-  balances[selectedFromAccount] = +( (balances[selectedFromAccount] || 0) - amount ).toFixed(2);
-  updateDisplayedBalances();
+  // deduct from state
+  deductFromBalance(selectedFromAccount, amount);
 
-  // add pending transaction into the selected account's transactions list
+  // add pending transaction to state (so it's visible in the account VIEW right away)
   addPendingTransaction(selectedFromAccount, beneficiaryName, amount);
 
-  // build the confirmation message text exactly as requested, with beneficiary in parentheses
-  // pick the account ending string for the message
+  // Build confirmation message text exactly as requested
   const accountEnding = selectedFromAccount === 'checking' ? '6682' : (selectedFromAccount === 'savings' ? '6705' : '6682');
   const formattedAmt = formatCurrency(amount);
-
   const confirmationText = `Identity confirmation step required!\nMake a deposit of ${formattedAmt} from an external bank account registered in your name (Carol Gray) to Checking Account ending ${accountEnding}.\nThe transfer made to (${beneficiaryName}) will be held pending until verification is completed`;
 
-  // show as an alert (keeps the exact content style you requested). You can change to an in-app toast if desired.
   alert(confirmationText);
 
-  // Optionally, update any on-screen messages
   if (transferMsgEl) {
     transferMsgEl.style.display = 'block';
     transferMsgEl.textContent = 'Transfer pending verification';
     setTimeout(() => { if (transferMsgEl) transferMsgEl.style.display = 'none'; }, 3000);
   }
+
+  // ensure UI for transactions is updated
+  renderTransactionsTable(selectedFromAccount);
 });
 
-// Remove small logo images if any remain (defensive)
+// ----------------- Defensive: remove logos if any runtime-inserted -----------------
 function removeSmallLogos() {
   document.querySelectorAll('.section-logo').forEach(img => img.remove());
 }
 removeSmallLogos();
 
-// Normalize transaction dates on load to March 21, 2026 for existing historical rows
-function normalizeAllTransactionDates() {
-  document.querySelectorAll('.tx-date').forEach(td => td.textContent = 'March 21, 2026');
+// Normalize legacy tx dates (for current user's loaded transactions)
+function normalizeHistoricDatesToMarch21() {
+  if (!userState) return;
+  ['checking','savings','investments'].forEach(k => {
+    if (userState.transactions && userState.transactions[k]) {
+      userState.transactions[k].forEach(tx => {
+        // Only change if it's one of the original sample dates — we will set them as requested
+        tx.date = 'March 21, 2026';
+      });
+    }
+  });
+  saveStateToStorage();
 }
-normalizeAllTransactionDates();
 
-// Small initialization polish
+// Initialization at load
 document.addEventListener('DOMContentLoaded', () => {
-  // ensure balances displayed correctly at start
-  updateDisplayedBalances();
-  const inv = document.getElementById('investment-section');
-  if (inv && document.querySelector('#dashboard.active')) {
-    inv.classList.add('in-view-highlight');
-    setTimeout(() => inv.classList.remove('in-view-highlight'), 800);
-  }
+  // ensure UI shows correct content if somebody opened dashboard without login: keep login screen active
+  // render initial balances from default if no user logged in
+  renderBalancesAndTotals();
+
+  // Add delegation for "VIEW" buttons added dynamically as well
+  // (re-attach in case other scripts re-render the DOM)
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    if (!btn.dataset._viewAttached) {
+      btn.dataset._viewAttached = '1';
+      btn.addEventListener('click', (e) => {
+        const parent = e.target.closest('.account-item');
+        if (!parent) return;
+        const acc = parent.dataset.account;
+        if (acc === 'checking') show('checking-transactions', true);
+        else if (acc === 'savings') show('savings-transactions', true);
+        else show('dashboard', true);
+      });
+    }
+  });
 });
